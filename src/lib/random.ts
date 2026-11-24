@@ -22,3 +22,14 @@ export function rng(seed: number): () => number {
 
 /** Uniform value in [-1, 1]. */
 export const spread = (r: () => number) => r() * 2 - 1;
+
+/** Fisher–Yates with a seeded PRNG: the same seed always gives the same order. */
+export function seededShuffle<T>(items: readonly T[], seed: number): T[] {
+  const out = [...items];
+  const r = rng(seed ^ 0x9e3779b9);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}

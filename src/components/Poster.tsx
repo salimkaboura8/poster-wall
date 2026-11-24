@@ -54,7 +54,7 @@ export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOp
   const src = movie.posterPath && !broken ? posterUrl(movie.posterPath, look.scale > 1.1 ? 'w500' : 'w342') : null;
 
   return (
-    <li className={`poster${isNew ? ' poster--new' : ''}`} style={style}>
+    <li className={`poster${isNew ? ' poster--new' : ''}`} style={style} data-id={movie.id}>
       <button type="button" className="poster__card" onClick={() => onOpen(movie)}>
         {src ? (
           <img

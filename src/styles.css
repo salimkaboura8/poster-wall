@@ -1029,10 +1029,6 @@ code {
     width: 58%;
   }
 
-  .topbar {
-    flex-wrap: wrap;
-  }
-
   .tool {
     padding: 6px 10px;
   }
@@ -1049,6 +1045,24 @@ code {
 
 .credits a {
   color: var(--ink-2);
+}
+
+.about {
+  max-width: 68ch;
+  margin-bottom: 18px;
+}
+
+.about h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.about p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .toast {
@@ -1373,6 +1387,85 @@ code {
   }
 }
 
+/* ───────────── top bar: full on wide screens, Share + ⋯ on phones ───────────── */
+.topbar {
+  flex-wrap: nowrap;
+}
+
+.brand {
+  flex: none;
+  white-space: nowrap;
+}
+
+.tools--compact {
+  display: none;
+  position: relative;
+  flex-wrap: nowrap;
+}
+
+.tool--more {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  padding: 7px 0;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 70;
+  display: grid;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  background: rgba(24, 22, 18, 0.94);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.9);
+  animation: menu-in 0.22s var(--ease-out);
+  transform-origin: top right;
+}
+
+.menu button {
+  border: 0;
+  background: none;
+  padding: 11px 14px;
+  border-radius: 12px;
+  text-align: start;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.menu button:hover:not(:disabled),
+.menu button:focus-visible {
+  background: rgba(255, 248, 230, 0.08);
+  outline: none;
+}
+
+.menu button:disabled {
+  color: var(--ink-3);
+  opacity: 0.5;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+
+@media (max-width: 720px) {
+  .tools--full {
+    display: none;
+  }
+
+  .tools--compact {
+    display: flex;
+  }
+}
+
 /* ───────────── share ───────────── */
 .tool--share {
   background: var(--accent);
@@ -1468,17 +1561,6 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-}
-
-.share__link {
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-}
-
-.share__link h3 {
-  margin: 0 0 10px;
-  font-size: 1.05rem;
 }
 
 .share__row {

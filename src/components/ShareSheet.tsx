@@ -113,16 +113,13 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
         </button>
         {canShareFile && (
           <button type="button" className="btn btn--ghost" onClick={shareFile} disabled={!ready}>
-            Share to Instagram, WhatsApp…
+            Share…
           </button>
         )}
       </div>
-      {!canShareFile && (
-        <p className="share__note">
-          Instagram stories are posted from the phone: save the photo and add it to your story, or open this site on
-          your phone and tap <b>Share</b>.
-        </p>
-      )}
+      <p className="share__note">
+        For an Instagram story, save the <b>Story</b> photo and add it from the Instagram app.
+      </p>
 
       <div className="share__link">
         <h3>Link to your wall</h3>
@@ -152,7 +149,7 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
         </div>
         <p className="share__note">
           {local
-            ? 'You are on localhost: links will open for others once the site is deployed.'
+            ? 'You are on localhost: links open for others on the deployed site.'
             : 'The link holds your films and ratings, read-only. It updates only when you share again.'}
         </p>
       </div>

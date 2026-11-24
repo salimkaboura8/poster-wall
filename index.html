@@ -2,14 +2,114 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Poster Wall · Your favourite films as a wall of movie posters</title>
+    <meta
+      name="description"
+      content="Turn the films you've watched into a wall of movie posters, sized by your ratings. Import your Letterboxd diary, rate films, reshuffle the collage and share it as a photo or a link. Free, no account."
+    />
+    <link rel="canonical" href="https://poster-wall-psi.vercel.app/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="theme-color" content="#0e0d0b" />
-    <meta name="description" content="Poster Wall — collect the films you love as posters pinned to your own wall." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="application-name" content="Poster Wall" />
+    <meta name="apple-mobile-web-app-title" content="Poster Wall" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Poster Wall</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- link previews (Facebook, WhatsApp, iMessage, LinkedIn…) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Poster Wall" />
+    <meta property="og:url" content="https://poster-wall-psi.vercel.app/" />
+    <meta property="og:title" content="Poster Wall · Your films, pinned like posters on a wall" />
+    <meta
+      property="og:description"
+      content="A collage of the films you love, each poster sized by your rating. Import from Letterboxd, then share your wall as a photo or a link."
+    />
+    <meta property="og:image" content="https://poster-wall-psi.vercel.app/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Poster Wall: tilted movie posters pinned on a dark wall, each with a yellow star rating" />
+    <meta property="og:locale" content="en_GB" />
+
+    <!-- X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Poster Wall · Your films, pinned like posters on a wall" />
+    <meta
+      name="twitter:description"
+      content="A collage of the films you love, each poster sized by your rating. Import from Letterboxd and share your wall."
+    />
+    <meta name="twitter:image" content="https://poster-wall-psi.vercel.app/og.jpg" />
+    <meta name="twitter:image:alt" content="Tilted movie posters pinned on a dark wall, each with a yellow star rating" />
+
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Poster Wall",
+        "url": "https://poster-wall-psi.vercel.app/",
+        "image": "https://poster-wall-psi.vercel.app/og.jpg",
+        "description": "Turn the films you've watched into a wall of movie posters, sized by your ratings. Import your Letterboxd diary and share your wall as a photo or a link.",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Movie poster collage sized by your ratings",
+          "Search any film (TMDB)",
+          "Import films and ratings from Letterboxd",
+          "Share as a story photo, square photo or link",
+          "No account: your wall stays in your browser"
+        ],
+        "sameAs": ["https://github.com/salimkaboura8/poster-wall"]
+      }
+    </script>
+
+    <style>
+      /* first paint (and the text crawlers see first); React replaces it on start */
+      .boot {
+        min-height: 100vh;
+        display: grid;
+        place-content: center;
+        gap: 12px;
+        padding: 24px;
+        background: #0e0d0b;
+        color: #f3ede2;
+        font-family: system-ui, sans-serif;
+        text-align: center;
+      }
+      .boot h1 {
+        margin: 0;
+        font-size: clamp(2rem, 7vw, 3.4rem);
+        letter-spacing: -0.04em;
+      }
+      .boot h1 span {
+        color: #ffd23f;
+        font-style: italic;
+        font-weight: 400;
+      }
+      .boot p {
+        margin: 0 auto;
+        max-width: 44ch;
+        color: #b9b1a3;
+        line-height: 1.5;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot">
+        <h1>poster <span>wall</span></h1>
+        <p>Your favourite films as a wall of movie posters, each one sized by how much you loved it.</p>
+        <noscript><p>Poster Wall needs JavaScript to build your wall.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
