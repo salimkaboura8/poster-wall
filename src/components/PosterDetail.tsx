@@ -29,8 +29,13 @@ export function PosterDetail({ movie, onRemove, onClose }: Props) {
         </h2>
         {movie.overview && <p className="detail__overview">{movie.overview}</p>}
         <div className="detail__actions">
+          {movie.letterboxdUri && (
+            <a className="btn btn--ghost" href={movie.letterboxdUri} target="_blank" rel="noreferrer">
+              Letterboxd
+            </a>
+          )}
           <a className="btn btn--ghost" href={tmdbMovieUrl(movie.id)} target="_blank" rel="noreferrer">
-            View on TMDB
+            TMDB
           </a>
           <button type="button" className="btn btn--danger" onClick={() => onRemove(movie.id)}>
             Unpin
