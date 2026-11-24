@@ -2,6 +2,7 @@ import { memo, useMemo, useState, type CSSProperties } from 'react';
 import type { WallMovie } from '../lib/storage';
 import { posterUrl } from '../lib/tmdb';
 import { hash, rng, spread } from '../lib/random';
+import { ratingScale, stars } from '../lib/rating';
 
 type Props = {
   movie: WallMovie;
@@ -12,7 +13,8 @@ type Props = {
   onOpen: (m: WallMovie) => void;
 };
 
-const SIZES = [0.82, 1, 1, 1.12, 1.26];
+/** Unrated posters stay mid-size so rated favourites stand out. */
+const UNRATED = [0.9, 0.95, 1, 1, 1.05];
 const PAPERS = ['#e9d9b8', '#d8c7a5', '#c9d3c2', '#e6c9b7', '#cfc6d8'];
 
 /** One poster with its own seeded tilt, offset, size and fastener. */
@@ -25,15 +27,16 @@ export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOp
       rot: spread(r) * 6,
       x: spread(r) * 14,
       y: spread(r) * 34,
-      scale: SIZES[Math.floor(r() * SIZES.length)],
-      z: Math.floor(r() * 8),
+      // your rating decides the size (and who wins an overlap); unrated stays mid-size
+      scale: movie.rating ? ratingScale(movie.rating) : UNRATED[Math.floor(r() * UNRATED.length)],
+      z: movie.rating ? Math.round(movie.rating * 2) : Math.floor(r() * 5),
       fastener: r() < 0.55 ? 'tape' : 'pin',
       tapeRot: spread(r) * 14,
       tapeX: 50 + spread(r) * 18,
       paper: PAPERS[Math.floor(r() * PAPERS.length)],
       fall: spread(r) * 28,
     };
-  }, [movie.id, seed]);
+  }, [movie.id, movie.rating, seed]);
 
   const style = {
     '--r': `${look.rot.toFixed(2)}deg`,
@@ -71,11 +74,14 @@ export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOp
         )}
         <span className="poster__caption" aria-hidden="true">
           <span className="poster__title">{movie.title}</span>
-          {movie.year && <span className="poster__year">{movie.year}</span>}
+          <span className="poster__year">
+            {movie.rating ? <span className="poster__stars">{stars(movie.rating)}</span> : movie.year}
+          </span>
         </span>
         <span className="sr-only">
           {movie.title}
           {movie.year ? ` (${movie.year})` : ''}
+          {movie.rating ? `, rated ${movie.rating} out of 5` : ''}
         </span>
       </button>
       <span className={`fastener fastener--${look.fastener}`} aria-hidden="true" />

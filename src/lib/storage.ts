@@ -7,6 +7,8 @@ export type WallMovie = {
   addedAt: number;
   /** Film page on Letterboxd, when the film came from a Letterboxd import. */
   letterboxdUri?: string;
+  /** Your rating, 0.5–5 in half stars (from Letterboxd or set here). Drives poster size. */
+  rating?: number;
 };
 
 export type Profile = {
@@ -71,6 +73,7 @@ export function parseWall(raw: unknown): WallState | null {
       ...(typeof m.letterboxdUri === 'string' && LETTERBOXD_URI.test(m.letterboxdUri)
         ? { letterboxdUri: m.letterboxdUri }
         : {}),
+      ...(typeof m.rating === 'number' && m.rating >= 0.5 && m.rating <= 5 ? { rating: Math.round(m.rating * 2) / 2 } : {}),
     })),
     seed: typeof o.seed === 'number' ? o.seed : 1,
   };

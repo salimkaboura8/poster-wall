@@ -20,6 +20,7 @@ A small, personal take on the film diary: no ratings and no reviews, just a page
 - **A wall that isn't a grid.** Every poster gets its own tilt, offset and size, and is held up with a strip of torn masking tape or a yellow push pin. Neighbours overlap a little, like a real wall.
 - **Pinning takes two seconds.** Hit the yellow **+** (or press <kbd>N</kbd>), type a title and press <kbd>Enter</kbd>. The film you meant comes first: exact titles and well-known films rank above obscure namesakes.
 - **Motion that feels physical.** A new poster drops from above, overshoots, wobbles and settles, and its tape lands last. Hovering lifts and straightens a poster. All motion is turned off under `prefers-reduced-motion`.
+- **Your ratings set the size.** A 5★ film is the biggest poster on the wall (1.52×), a ½★ the smallest (0.68×), and higher-rated posters win overlaps. Ratings come from Letterboxd, or click a poster and rate it on the stars (half stars, arrow keys work too); it grows or shrinks right there.
 - **Bring your Letterboxd.** Link your username (it shows as a chip under your name) to pin the films from your latest diary entries, or drop your Letterboxd export `.zip` to pin *everything* you've ever watched. Imported posters rain onto the wall in a cascade.
 - **Reshuffle.** Don't like how the wall landed? Re-throw every poster. The layout is seeded, so it stays put between visits until you reshuffle.
 - **Poster details.** Click a poster for a bigger view, the synopsis, the date you pinned it, a link to TMDB and *Unpin*.
@@ -99,11 +100,11 @@ Letterboxd has no public API, so Poster Wall uses the two public ways to read yo
 | | Recent films (username) | Everything (data export) |
 |---|---|---|
 | **How** | Type your username (or paste your profile link) and press **Pull films** | Letterboxd → [Settings → Data](https://letterboxd.com/settings/data/) → **Export your data**, then drop the `.zip` (or just `watched.csv`) |
-| **What you get** | Films from your latest diary entries (the RSS feed keeps roughly the last 50–100) | Every film you've marked as watched |
+| **What you get** | Films from your latest diary entries with your ratings (the feed keeps roughly the last 50) | **Every** film you've marked as watched, with ratings from `ratings.csv` (diary ratings fill the gaps) |
 | **Matching** | Exact: each feed entry carries its TMDB id | By title + release year on TMDB (±1 year tolerance); unmatched films are counted in the toast |
 | **Needs** | A proxy, because letterboxd.com sends no CORS headers. `npm run dev` and `npm run preview` include one at `/letterboxd`. | Nothing: the file never leaves your browser |
 
-Films already on your wall are skipped, the import can be stopped half-way (*Stop and pin what's found*), and each imported poster's detail view links back to the film on Letterboxd.
+To get your whole history, use the export: the username feed is only a recent slice. Films already on your wall aren't duplicated, but their rating is refreshed from Letterboxd (so re-importing re-sizes them), the import can be stopped half-way (*Stop and pin what's found*), and each imported poster's detail view links back to the film on Letterboxd.
 
 > [!NOTE]
 > **Deploying?** The built-in proxy only exists in Vite's dev/preview servers. On a static host, point `VITE_LETTERBOXD_PROXY` at any small proxy that forwards `/<username>/rss/` to `https://letterboxd.com/<username>/rss/` (a few lines on Cloudflare Workers or a Vercel function). The export-file import works everywhere without it.
@@ -118,11 +119,13 @@ const r = rng(hash(`${movie.id}:${seed}`)); // deterministic per film + wall see
 rot:   spread(r) * 6,     // tilt, ±6°
 x:     spread(r) * 14,    // horizontal nudge, px
 y:     spread(r) * 34,    // vertical drift, px
-scale: SIZES[...],        // 0.82× – 1.26×
+scale: movie.rating ? ratingScale(movie.rating) : UNRATED[...], // see below
 fastener: r() < 0.55 ? 'tape' : 'pin',
 ```
 
 `hash` is FNV-1a and `rng` is mulberry32 (`src/lib/random.ts`). Because the numbers come from the film id plus a per-wall seed, the wall looks hand-made but never jumps around on reload. **Reshuffle** just picks a new seed, and the CSS transition carries every poster to its new spot.
+
+Size is the one thing that isn't random. With a rating, `scale = 0.68 + (rating − 0.5) / 4.5 × 0.84` and `z-index = rating × 2`, so favourites are big and on top. Unrated films get a modest seeded size between 0.9× and 1.05×.
 
 The drop-in is a single keyframe animation that reads the same variables, so it lands exactly where that poster's resting transform is:
 
@@ -146,17 +149,19 @@ src/
 │  ├─ Poster.tsx           one seeded poster with tape or pin
 │  ├─ AddMovie.tsx         debounced TMDB search, Enter pins the top match
 │  ├─ LetterboxdImport.tsx username + export import, progress, cancel
-│  ├─ PosterDetail.tsx     big poster, synopsis, unpin
+│  ├─ PosterDetail.tsx     big poster, rating, synopsis, unpin
+│  ├─ StarRating.tsx       half-star slider (pointer + keyboard)
 │  └─ Sheet.tsx            native <dialog> wrapper
 ├─ lib/
 │  ├─ tmdb.ts              search + result ranking + image URLs
 │  ├─ letterboxd.ts        RSS feed, export ZIP/CSV parsing, TMDB matching pool
 │  ├─ storage.ts           localStorage, validated import, avatar resize
-│  └─ random.ts            FNV-1a hash + mulberry32 PRNG
+│  ├─ random.ts            FNV-1a hash + mulberry32 PRNG
+│  └─ rating.ts            rating → poster scale, ★ formatting
 └─ styles.css              tokens, collage, motion, glass
 ```
 
-**Stack:** React 19, TypeScript, Vite, and [fflate](https://github.com/101arrowz/fflate) to unzip the Letterboxd export. No UI kit and no state library: the whole app is about 2,600 lines, half of it CSS.
+**Stack:** React 19, TypeScript, Vite, and [fflate](https://github.com/101arrowz/fflate) to unzip the Letterboxd export. No UI kit and no state library: the whole app is about 2,900 lines, half of it CSS.
 
 ## Credits
 

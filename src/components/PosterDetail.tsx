@@ -1,16 +1,18 @@
 import type { WallMovie } from '../lib/storage';
 import { posterUrl, tmdbMovieUrl } from '../lib/tmdb';
+import { StarRating } from './StarRating';
 
 type Props = {
   movie: WallMovie;
   onRemove: (id: number) => void;
+  onRate: (id: number, rating: number | undefined) => void;
   onClose: () => void;
 };
 
 const pinnedOn = (t: number) =>
   new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function PosterDetail({ movie, onRemove, onClose }: Props) {
+export function PosterDetail({ movie, onRemove, onRate, onClose }: Props) {
   return (
     <article className="detail">
       <div className="detail__poster">
@@ -27,6 +29,7 @@ export function PosterDetail({ movie, onRemove, onClose }: Props) {
         <h2>
           {movie.title} {movie.year && <em>{movie.year}</em>}
         </h2>
+        <StarRating value={movie.rating} onChange={(r) => onRate(movie.id, r)} />
         {movie.overview && <p className="detail__overview">{movie.overview}</p>}
         <div className="detail__actions">
           {movie.letterboxdUri && (
