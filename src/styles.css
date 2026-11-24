@@ -16,7 +16,7 @@
   --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --base: clamp(112px, 15vw, 190px);
+  --base: clamp(100px, 13vw, 168px);
   color-scheme: dark;
 }
 
@@ -136,9 +136,11 @@ em {
 
 .tools {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 22px;
   background: var(--glass);
   border: 1px solid var(--line);
   backdrop-filter: blur(14px);
@@ -285,6 +287,10 @@ em {
 }
 
 /* ───────────── wall ───────────── */
+.wall {
+  overflow-x: clip; /* tilted edge posters never cause sideways scrolling */
+}
+
 .wall__grid {
   list-style: none;
   margin: 0;
@@ -298,7 +304,8 @@ em {
 }
 
 .poster {
-  --w: calc(var(--base) * var(--s));
+  /* never wider than ~half a phone screen, even at 5★ */
+  --w: min(calc(var(--base) * var(--s)), 46vw);
   position: relative;
   width: var(--w);
   margin: calc(var(--base) * -0.05) calc(var(--base) * -0.075) calc(var(--base) * 0.1);
@@ -1073,6 +1080,32 @@ code {
 }
 
 /* ───────────── rating ───────────── */
+/* a little yellow ticket on every rated poster, so size and stars read together */
+.poster__stub {
+  position: absolute;
+  z-index: 3;
+  bottom: 5%;
+  inset-inline-start: 6%;
+  padding: 0.15em 0.55em 0.2em;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: clamp(9px, calc(var(--w) * 0.07), 16px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: rotate(-3deg);
+  box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.2s;
+}
+
+.poster:hover .poster__stub,
+.poster:focus-within .poster__stub {
+  opacity: 0;
+}
+
 .poster__stars {
   font-family: var(--display);
   font-style: normal;
@@ -1338,6 +1371,175 @@ code {
   .lb__at {
     display: none;
   }
+}
+
+/* ───────────── share ───────────── */
+.tool--share {
+  background: var(--accent);
+  color: var(--accent-ink) !important;
+  font-weight: 650;
+}
+
+.tool--share:hover:not(:disabled) {
+  background: #ffdc66 !important;
+}
+
+.sheet--share {
+  margin-top: max(5vh, 16px);
+}
+
+.share {
+  padding: 14px 18px 20px;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 230, 0.04);
+}
+
+.segmented button {
+  border: 0;
+  background: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.segmented button.is-on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.share__hint {
+  margin: 8px 4px 14px;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+  font-size: 1.05rem;
+}
+
+.share__preview {
+  display: grid;
+  place-items: center;
+  height: min(46vh, 420px);
+  margin-bottom: 16px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.share__preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.9);
+  animation: fade 0.35s ease;
+}
+
+.share__preview--wall {
+  overflow-y: auto;
+  place-items: start center;
+}
+
+.share__preview--wall img {
+  max-height: none;
+}
+
+.share__loading {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--ink-3);
+}
+
+.share__actions,
+.share__social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.share__link {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.share__link h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.share__row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.share__row input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 230, 0.05);
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+}
+
+.share__note {
+  margin: 10px 2px 0;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+/* someone else's wall */
+.shared-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 10px 10px 10px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  color: var(--ink-2);
+}
+
+.shared-banner b {
+  color: var(--ink);
+}
+
+.profile__name:is(h1) {
+  margin-bottom: 10px;
+}
+
+.rating--static {
+  color: var(--accent);
+  font-size: 1.5rem;
+  letter-spacing: 0.06em;
 }
 
 /* ───────────── motion preferences ───────────── */

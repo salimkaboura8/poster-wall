@@ -2,7 +2,7 @@ import { memo, useMemo, useState, type CSSProperties } from 'react';
 import type { WallMovie } from '../lib/storage';
 import { posterUrl } from '../lib/tmdb';
 import { hash, rng, spread } from '../lib/random';
-import { ratingScale, stars } from '../lib/rating';
+import { ratingScale, stars, UNRATED_SCALE } from '../lib/rating';
 
 type Props = {
   movie: WallMovie;
@@ -13,8 +13,6 @@ type Props = {
   onOpen: (m: WallMovie) => void;
 };
 
-/** Unrated posters stay mid-size so rated favourites stand out. */
-const UNRATED = [0.9, 0.95, 1, 1, 1.05];
 const PAPERS = ['#e9d9b8', '#d8c7a5', '#c9d3c2', '#e6c9b7', '#cfc6d8'];
 
 /** One poster with its own seeded tilt, offset, size and fastener. */
@@ -26,10 +24,10 @@ export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOp
     return {
       rot: spread(r) * 6,
       x: spread(r) * 14,
-      y: spread(r) * 34,
-      // your rating decides the size (and who wins an overlap); unrated stays mid-size
-      scale: movie.rating ? ratingScale(movie.rating) : UNRATED[Math.floor(r() * UNRATED.length)],
-      z: movie.rating ? Math.round(movie.rating * 2) : Math.floor(r() * 5),
+      y: spread(r) * 20,
+      // size comes only from your rating (and so does who wins an overlap)
+      scale: movie.rating ? ratingScale(movie.rating) : UNRATED_SCALE,
+      z: movie.rating ? Math.round(movie.rating * 2) : 0,
       fastener: r() < 0.55 ? 'tape' : 'pin',
       tapeRot: spread(r) * 14,
       tapeX: 50 + spread(r) * 18,
@@ -84,6 +82,11 @@ export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOp
           {movie.rating ? `, rated ${movie.rating} out of 5` : ''}
         </span>
       </button>
+      {movie.rating ? (
+        <span className="poster__stub" aria-hidden="true">
+          {stars(movie.rating)}
+        </span>
+      ) : null}
       <span className={`fastener fastener--${look.fastener}`} aria-hidden="true" />
     </li>
   );
