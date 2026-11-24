@@ -6,7 +6,7 @@
 
 A small, personal take on the film diary: no ratings and no reviews, just a page with your name, your face and a messy, lovingly crooked collage of the posters of every film you care about.
 
-[Features](#features) · [Share](#share-your-wall) · [Run it](#run-it-locally) · [Deploy](#deploy-to-vercel) · [TMDB key](#get-a-tmdb-api-key) · [Letterboxd](#import-from-letterboxd) · [How it works](#how-the-wall-works) · [Credits](#credits)
+**[Live demo](https://poster-wall-psi.vercel.app)** · [Features](#features) · [Share](#share-your-wall) · [Run it](#run-it-locally) · [Deploy](#deploy-to-vercel) · [TMDB key](#get-a-tmdb-api-key) · [Letterboxd](#import-from-letterboxd) · [How it works](#how-the-wall-works) · [Credits](#credits)
 
 <img src="docs/wall.jpg" alt="A profile page: a round avatar, the name Salim in large type, and below it a collage of tilted movie posters held with tape and push pins on a dark wall" width="100%">
 
@@ -23,9 +23,10 @@ A small, personal take on the film diary: no ratings and no reviews, just a page
 - **Your ratings set the size.** Every half star is the same visible step (about 14% bigger): ½★ is the smallest poster (0.56×), 5★ the biggest (1.8×), and higher-rated posters win overlaps. Each rated poster wears a little yellow ticket with its stars, unrated films stay small, and **Sort: rating** puts your favourites first. Ratings come from Letterboxd, or click a poster and rate it (half stars, arrow keys work too).
 - **Share it.** Save a designed photo (Instagram/Facebook **story** 9:16, **square** 1:1 for X and feeds, or the **full wall**), send it through your phone's share sheet, post on X or Facebook, or copy a link that opens your wall read-only.
 - **Bring your Letterboxd.** Link your username (it shows as a chip under your name) to pin the films from your latest diary entries, or drop your Letterboxd export `.zip` to pin *everything* you've ever watched. Imported posters rain onto the wall in a cascade.
-- **Reshuffle.** Don't like how the wall landed? Re-throw every poster. The layout is seeded, so it stays put between visits until you reshuffle.
+- **Reshuffle.** Re-throws the whole wall: a new order *and* new tilts, offsets, tape and pins, with every poster gliding to its new spot. It's seeded, so the wall stays put between visits until you reshuffle again (**Sort** switches back to recent or rating order).
 - **Poster details.** Click a poster for a bigger view, the synopsis, the date you pinned it, a link to TMDB and *Unpin*.
 - **Yours, locally.** No account and no server: the wall lives in your browser (`localStorage`). **Export** downloads it as JSON and **Import** restores it on any device.
+- **Phone-first top bar.** On narrow screens the toolbar folds into **Share** and a **⋯** menu, so it never wraps.
 - **Keyboard and screen-reader friendly.** Native `<dialog>` sheets (focus trap, <kbd>Esc</kbd>), visible focus rings and labelled controls.
 
 <table>
@@ -58,8 +59,9 @@ A small, personal take on the film diary: no ratings and no reviews, just a page
 
 Click **Share** in the top bar.
 
-- **Photo.** A collage drawn on a canvas, in three formats: *Story* (1080×1920, your best-rated films), *Square* (1080×1080) and *Full wall* (every poster, one tall image). Posters keep their rating size, tilt, tape, pins and star tickets.
-- **Share sheet.** On phones, *Share to Instagram, WhatsApp…* hands the photo to the system share sheet, which is how a picture reaches an Instagram story. On desktop, *Save photo* downloads it.
+- **Instagram story** comes first. A 9:16 image of your best-rated films is drawn as soon as the sheet opens, so on a phone **Share to story** hands it to the system share sheet in one tap (pick *Instagram* → *Story*). On a computer the same card saves the image, with the two steps to post it from your phone.
+- **Photo.** The same canvas collage as a *Square* (1080×1080, for X and feed posts) or the *Full wall* (every poster, one tall image). Posters keep their rating size, tilt, tape, pins and star tickets.
+- **Share photo…** On phones, any format can go through the system share sheet (WhatsApp, Messages…); on desktop, *Save photo* downloads it.
 - **Link.** `https://your-site/#w=…` holds the whole wall in the URL fragment: your name, Letterboxd username and each film as a TMDB id + rating, varint-packed and deflated (47 films ≈ 260 characters). There's no database and nothing is stored on a server; the fragment isn't even sent to it. Whoever opens it sees a read-only copy with posters fetched from TMDB, plus *Make your own*.
 - **X / Facebook.** Open their share dialogs with your link and a line of text.
 
@@ -174,7 +176,8 @@ src/
 │  ├─ Poster.tsx           one seeded poster with tape or pin
 │  ├─ AddMovie.tsx         debounced TMDB search, Enter pins the top match
 │  ├─ LetterboxdImport.tsx username + export import, progress, cancel
-│  ├─ ShareSheet.tsx       photo formats, share sheet, X / Facebook, link
+│  ├─ ShareSheet.tsx       Instagram story, photo formats, X / Facebook, link
+│  ├─ TopBar.tsx           full toolbar, or Share + ⋯ menu on phones
 │  ├─ SharedView.tsx       read-only wall opened from a link
 │  ├─ PosterDetail.tsx     big poster, rating, synopsis, unpin
 │  ├─ StarRating.tsx       half-star slider (pointer + keyboard)

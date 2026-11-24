@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FORMATS, renderCollage, type CollageFormat } from '../lib/collage';
+import { FORMATS, renderCollage, type CollageFormat, type CollageInput } from '../lib/collage';
 import { encodeWall, isLocalOrigin, shareUrl } from '../lib/shareLink';
 import type { WallMovie, WallState } from '../lib/storage';
 
@@ -10,57 +10,85 @@ type Props = {
   onDone: (message: string) => void;
 };
 
+type Rendered = { blob: Blob; url: string; file: File };
+type PhotoFormat = Exclude<CollageFormat, 'story'>;
+
 const fileName = (name: string, format: CollageFormat) =>
   `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'my'}-poster-wall-${format}.jpg`;
 
-export function ShareSheet({ wall, ordered, onDone }: Props) {
-  const [format, setFormat] = useState<CollageFormat>('story');
-  const [image, setImage] = useState<{ blob: Blob; url: string; format: CollageFormat } | null>(null);
-  const [error, setError] = useState('');
-  const local = isLocalOrigin();
+const canShareFiles = (file: File) => Boolean(navigator.canShare?.({ files: [file] }));
 
-  const link = useMemo(() => shareUrl(encodeWall(wall, ordered)), [wall, ordered]);
-  const text = `${wall.profile.name.trim() ? `${wall.profile.name.trim()}'s` : 'My'} poster wall: ${wall.movies.length} films, sized by how much I loved them.`;
+const ready = (r: Rendered | 'failed' | undefined) => (r && r !== 'failed' ? r : undefined);
 
+/** Renders one collage format; re-renders when the format changes. */
+function useCollage(format: CollageFormat, input: CollageInput, name: string): Rendered | 'failed' | undefined {
+  const [state, setState] = useState<{ format: CollageFormat; value: Rendered | 'failed' } | null>(null);
   useEffect(() => {
     let alive = true;
     let url = '';
-    setError('');
-    renderCollage(format, {
-      profile: wall.profile,
-      movies: ordered,
-      seed: wall.seed,
-      siteHost: local ? null : location.host,
-    })
+    renderCollage(format, input)
       .then((blob) => {
         if (!alive) return;
         url = URL.createObjectURL(blob);
-        setImage({ blob, url, format });
+        const file = new File([blob], fileName(name, format), { type: 'image/jpeg' });
+        setState({ format, value: { blob, url, file } });
       })
-      .catch(() => alive && setError("Couldn't draw the image. Check your connection and try again."));
+      .catch(() => alive && setState({ format, value: 'failed' }));
     return () => {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [format, wall.profile, wall.seed, ordered, local]);
+    // the sheet mounts fresh each time it opens, so the wall can't change underneath it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format]);
+  return state?.format === format ? state.value : undefined;
+}
 
-  const ready = image?.format === format ? image : null;
-  const file = ready ? new File([ready.blob], fileName(wall.profile.name, format), { type: 'image/jpeg' }) : null;
-  const canShareFile = Boolean(file && navigator.canShare?.({ files: [file] }));
+const download = (r: Rendered) => {
+  const a = document.createElement('a');
+  a.href = r.url;
+  a.download = r.file.name;
+  a.click();
+};
 
-  const save = () => {
-    if (!ready || !file) return;
-    const a = document.createElement('a');
-    a.href = ready.url;
-    a.download = file.name;
-    a.click();
-    onDone('Photo saved');
+export function ShareSheet({ wall, ordered, onDone }: Props) {
+  const [photo, setPhoto] = useState<PhotoFormat>('square');
+  const local = isLocalOrigin();
+
+  const link = useMemo(() => shareUrl(encodeWall(wall, ordered)), [wall, ordered]);
+  const who = wall.profile.name.trim();
+  const text = `${who ? `${who}'s` : 'My'} poster wall: ${wall.movies.length} films, sized by how much I loved them.`;
+
+  // The story renders as soon as the sheet opens, so the Instagram button can share on the
+  // first tap (browsers only allow sharing right after a tap); the photo renders on demand.
+  const input = { profile: wall.profile, movies: ordered, seed: wall.seed, siteHost: local ? null : location.host };
+  const images: Partial<Record<CollageFormat, Rendered | 'failed'>> = {
+    story: useCollage('story', input, wall.profile.name),
+    [photo]: useCollage(photo, input, wall.profile.name),
   };
 
-  const shareFile = async () => {
-    if (!file) return;
+  const story = ready(images.story);
+  const shot = ready(images[photo]);
+  const storyNative = story ? canShareFiles(story.file) : false;
+
+  const shareStory = async () => {
+    if (!story) return;
+    if (storyNative) {
+      try {
+        await navigator.share({ files: [story.file] });
+      } catch {
+        /* closed the share sheet */
+      }
+      return;
+    }
+    download(story);
+    onDone('Story image saved: add it to your Instagram story from your phone');
+  };
+
+  const sharePhoto = async () => {
+    if (!shot) return;
     try {
-      await navigator.share({ files: [file], title: 'My poster wall', text });
+      await navigator.share({ files: [shot.file], title: 'My poster wall', text });
     } catch {
       /* cancelled */
     }
@@ -75,7 +103,7 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
     }
   };
 
-  const open = (url: string) => window.open(url, '_blank', 'noopener,noreferrer,width=640,height=640');
+  const popup = (url: string) => window.open(url, '_blank', 'noopener,noreferrer,width=640,height=640');
 
   return (
     <div className="share">
@@ -83,48 +111,97 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
         Show off your <em>wall.</em>
       </h2>
 
-      <div className="segmented" role="radiogroup" aria-label="Image format">
-        {(Object.keys(FORMATS) as CollageFormat[]).map((f) => (
+      {/* 1 · Instagram story: the headline option */}
+      <section className="share__card share__story">
+        <div className="share__story-thumb">
+          {story ? (
+            <img src={story.url} alt="Your story image" />
+          ) : (
+            <span>{images.story === 'failed' ? '!' : '…'}</span>
+          )}
+        </div>
+        <div className="share__story-text">
+          <h3>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="17.3" cy="6.7" r="1.2" fill="currentColor" />
+            </svg>
+            Instagram story
+          </h3>
+          {storyNative ? (
+            <p>
+              Tap below, choose <b>Instagram</b>, then <b>Story</b>. Your top-rated posters, made for a 9:16 story.
+            </p>
+          ) : (
+            <ol>
+              <li>Save the 9:16 story image.</li>
+              <li>
+                In Instagram on your phone, tap <b>+</b> → <b>Story</b> and pick it.
+              </li>
+            </ol>
+          )}
+          <button type="button" className="btn btn--accent share__story-btn" onClick={shareStory} disabled={!story}>
+            {storyNative ? 'Share to story' : 'Save story image'}
+          </button>
+          {!storyNative && (
+            <p className="share__tip">On your phone, this button sends the story straight to Instagram.</p>
+          )}
+        </div>
+      </section>
+
+      {/* 2 · Photo for posts */}
+      <section className="share__card">
+        <div className="share__head">
+          <h3>Photo</h3>
+          <div className="segmented" role="radiogroup" aria-label="Photo format">
+            {(['square', 'wall'] as PhotoFormat[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="radio"
+                aria-checked={photo === f}
+                className={photo === f ? 'is-on' : ''}
+                onClick={() => setPhoto(f)}
+              >
+                {FORMATS[f].label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="share__hint">{FORMATS[photo].hint}</p>
+        <div className={`share__preview share__preview--${photo}`}>
+          {shot ? (
+            <img src={shot.url} alt={`Preview of your ${FORMATS[photo].label.toLowerCase()} image`} />
+          ) : (
+            <span className="share__loading">
+              {images[photo] === 'failed' ? "Couldn't draw the image. Try again." : 'Pinning your posters…'}
+            </span>
+          )}
+        </div>
+        <div className="share__actions">
           <button
-            key={f}
             type="button"
-            role="radio"
-            aria-checked={format === f}
-            className={format === f ? 'is-on' : ''}
-            onClick={() => setFormat(f)}
+            className="btn btn--ghost"
+            disabled={!shot}
+            onClick={() => {
+              if (!shot) return;
+              download(shot);
+              onDone('Photo saved');
+            }}
           >
-            {FORMATS[f].label}
+            Save photo
           </button>
-        ))}
-      </div>
-      <p className="share__hint">{FORMATS[format].hint}</p>
+          {shot && canShareFiles(shot.file) && (
+            <button type="button" className="btn btn--ghost" onClick={sharePhoto}>
+              Share photo…
+            </button>
+          )}
+        </div>
+      </section>
 
-      <div className={`share__preview share__preview--${format}`}>
-        {ready ? (
-          <img src={ready.url} alt={`Preview of your ${FORMATS[format].label.toLowerCase()} image`} />
-        ) : (
-          <span className="share__loading">{error || 'Pinning your posters…'}</span>
-        )}
-      </div>
-
-      <div className="share__actions">
-        <button type="button" className="btn btn--accent" onClick={save} disabled={!ready}>
-          Save photo
-        </button>
-        {canShareFile && (
-          <button type="button" className="btn btn--ghost" onClick={shareFile} disabled={!ready}>
-            Share to Instagram, WhatsApp…
-          </button>
-        )}
-      </div>
-      {!canShareFile && (
-        <p className="share__note">
-          Instagram stories are posted from the phone: save the photo and add it to your story, or open this site on
-          your phone and tap <b>Share</b>.
-        </p>
-      )}
-
-      <div className="share__link">
+      {/* 3 · Link, X, Facebook */}
+      <section className="share__card">
         <h3>Link to your wall</h3>
         <div className="share__row">
           <input readOnly value={link} aria-label="Link to your wall" onFocus={(e) => e.currentTarget.select()} />
@@ -137,7 +214,7 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
             type="button"
             className="btn btn--ghost btn--small"
             onClick={() =>
-              open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`)
+              popup(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`)
             }
           >
             Post on X
@@ -145,17 +222,17 @@ export function ShareSheet({ wall, ordered, onDone }: Props) {
           <button
             type="button"
             className="btn btn--ghost btn--small"
-            onClick={() => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`)}
+            onClick={() => popup(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`)}
           >
             Share on Facebook
           </button>
         </div>
         <p className="share__note">
           {local
-            ? 'You are on localhost: links will open for others once the site is deployed.'
-            : 'The link holds your films and ratings, read-only. It updates only when you share again.'}
+            ? 'You are on localhost: links open for others on the deployed site.'
+            : 'The link holds your films and ratings, read-only. Share again after changes.'}
         </p>
-      </div>
+      </section>
     </div>
   );
 }

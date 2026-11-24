@@ -6,9 +6,11 @@ import { ProfileHeader } from './components/ProfileHeader';
 import { ShareSheet } from './components/ShareSheet';
 import { SharedView } from './components/SharedView';
 import { Sheet } from './components/Sheet';
+import { TopBar } from './components/TopBar';
 import { Wall } from './components/Wall';
 import type { ImportSource, LbUpdate, Matched } from './lib/letterboxd';
 import { codeFromHash, decodeWall, type SharedWall } from './lib/shareLink';
+import { seededShuffle } from './lib/random';
 import { downloadJson, loadWall, parseWall, saveWall, type WallMovie, type WallState } from './lib/storage';
 import type { SearchResult } from './lib/tmdb';
 
@@ -67,13 +69,12 @@ export default function App() {
     noticeTimer.current = window.setTimeout(() => setNotice(''), ms);
   };
 
-  const ordered = useMemo(
-    () =>
-      wall.sort === 'rating'
-        ? [...wall.movies].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.addedAt - a.addedAt)
-        : wall.movies,
-    [wall.movies, wall.sort],
-  );
+  const ordered = useMemo(() => {
+    if (wall.sort === 'rating')
+      return [...wall.movies].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.addedAt - a.addedAt);
+    if (wall.sort === 'shuffle') return seededShuffle(wall.movies, wall.seed);
+    return wall.movies;
+  }, [wall.movies, wall.sort, wall.seed]);
 
   const isPinned = useCallback((id: number) => wall.movies.some((m) => m.id === id), [wall.movies]);
 
@@ -189,55 +190,39 @@ export default function App() {
 
   return (
     <div className="app">
-      <nav className="topbar" aria-label="Wall tools">
-        {brand}
-        <div className="tools">
-          <button
-            type="button"
-            className="tool"
-            aria-pressed={wall.sort === 'rating'}
-            disabled={wall.movies.length < 2}
-            onClick={() => setWall((w) => ({ ...w, sort: w.sort === 'rating' ? 'recent' : 'rating' }))}
-          >
-            {wall.sort === 'rating' ? 'Sort: rating' : 'Sort: recent'}
-          </button>
-          <button type="button" className="tool tool--lb" onClick={() => setSheet('letterboxd')}>
-            Letterboxd
-          </button>
-          <button
-            type="button"
-            className="tool"
-            disabled={wall.movies.length < 2}
-            onClick={() => setWall((w) => ({ ...w, seed: Math.floor(Math.random() * 1e6) }))}
-          >
-            Reshuffle
-          </button>
-          <button type="button" className="tool" disabled={wall.movies.length === 0} onClick={() => downloadJson(wall)}>
-            Export
-          </button>
-          <button type="button" className="tool" onClick={() => importRef.current?.click()}>
-            Import
-          </button>
-          <button
-            type="button"
-            className="tool tool--share"
-            disabled={wall.movies.length === 0}
-            onClick={() => setSheet('share')}
-          >
-            Share
-          </button>
-          <input
-            ref={importRef}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              void importFile(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-        </div>
-      </nav>
+      <TopBar
+        brand={brand}
+        canShare={wall.movies.length > 0}
+        onShare={() => setSheet('share')}
+        tools={[
+          {
+            key: 'sort',
+            label: `Sort: ${wall.sort === 'rating' ? 'rating' : wall.sort === 'shuffle' ? 'shuffled' : 'recent'}`,
+            disabled: wall.movies.length < 2,
+            onClick: () => setWall((w) => ({ ...w, sort: w.sort === 'recent' ? 'rating' : 'recent' })),
+          },
+          { key: 'lb', label: 'Letterboxd', onClick: () => setSheet('letterboxd') },
+          {
+            key: 'shuffle',
+            label: 'Reshuffle',
+            disabled: wall.movies.length < 2,
+            // a new seed re-throws every poster: new spots in the order, new tilt, new fastener
+            onClick: () => setWall((w) => ({ ...w, seed: Math.floor(Math.random() * 1e6), sort: 'shuffle' })),
+          },
+          { key: 'export', label: 'Export', disabled: wall.movies.length === 0, onClick: () => downloadJson(wall) },
+          { key: 'import', label: 'Import', onClick: () => importRef.current?.click() },
+        ]}
+      />
+      <input
+        ref={importRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          void importFile(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
 
       <main>
         <ProfileHeader
