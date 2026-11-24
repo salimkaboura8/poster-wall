@@ -1,18 +1,21 @@
 import type { WallMovie } from '../lib/storage';
 import { posterUrl, tmdbMovieUrl } from '../lib/tmdb';
+import { stars } from '../lib/rating';
 import { StarRating } from './StarRating';
 
 type Props = {
   movie: WallMovie;
-  onRemove: (id: number) => void;
-  onRate: (id: number, rating: number | undefined) => void;
   onClose: () => void;
-};
+} & (
+  | { readOnly?: false; onRemove: (id: number) => void; onRate: (id: number, rating: number | undefined) => void }
+  | { readOnly: true; onRemove?: never; onRate?: never }
+);
 
 const pinnedOn = (t: number) =>
   new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export function PosterDetail({ movie, onRemove, onRate, onClose }: Props) {
+export function PosterDetail(props: Props) {
+  const { movie, onClose } = props;
   return (
     <article className="detail">
       <div className="detail__poster">
@@ -25,11 +28,19 @@ export function PosterDetail({ movie, onRemove, onRate, onClose }: Props) {
         )}
       </div>
       <div className="detail__text">
-        <p className="eyebrow">pinned {pinnedOn(movie.addedAt)}</p>
+        {!props.readOnly && <p className="eyebrow">pinned {pinnedOn(movie.addedAt)}</p>}
         <h2>
           {movie.title} {movie.year && <em>{movie.year}</em>}
         </h2>
-        <StarRating value={movie.rating} onChange={(r) => onRate(movie.id, r)} />
+        {props.readOnly ? (
+          movie.rating ? (
+            <p className="rating rating--static" aria-label={`Rated ${movie.rating} out of 5`}>
+              {stars(movie.rating)}
+            </p>
+          ) : null
+        ) : (
+          <StarRating value={movie.rating} onChange={(r) => props.onRate(movie.id, r)} />
+        )}
         {movie.overview && <p className="detail__overview">{movie.overview}</p>}
         <div className="detail__actions">
           {movie.letterboxdUri && (
@@ -40,9 +51,11 @@ export function PosterDetail({ movie, onRemove, onRate, onClose }: Props) {
           <a className="btn btn--ghost" href={tmdbMovieUrl(movie.id)} target="_blank" rel="noreferrer">
             TMDB
           </a>
-          <button type="button" className="btn btn--danger" onClick={() => onRemove(movie.id)}>
-            Unpin
-          </button>
+          {!props.readOnly && (
+            <button type="button" className="btn btn--danger" onClick={() => props.onRemove(movie.id)}>
+              Unpin
+            </button>
+          )}
         </div>
       </div>
       <button type="button" className="close" onClick={onClose} aria-label="Close">

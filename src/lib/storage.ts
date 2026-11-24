@@ -25,6 +25,8 @@ export type WallState = {
   movies: WallMovie[];
   /** Changing the seed re-shuffles the collage. */
   seed: number;
+  /** Wall order: most recently pinned first, or highest rated first. */
+  sort?: 'recent' | 'rating';
 };
 
 const STORAGE_KEY = 'poster-wall:v1';
@@ -76,6 +78,7 @@ export function parseWall(raw: unknown): WallState | null {
       ...(typeof m.rating === 'number' && m.rating >= 0.5 && m.rating <= 5 ? { rating: Math.round(m.rating * 2) / 2 } : {}),
     })),
     seed: typeof o.seed === 'number' ? o.seed : 1,
+    sort: o.sort === 'rating' ? 'rating' : 'recent',
   };
 }
 

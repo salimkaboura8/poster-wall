@@ -1,11 +1,16 @@
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
 
-const token = import.meta.env.VITE_TMDB_READ_TOKEN?.trim();
-const apiKey = import.meta.env.VITE_TMDB_API_KEY?.trim();
+// Local dev talks to TMDB directly with the key from `.env`. Production builds never read
+// that key (the DEV guard lets the bundler drop it) and go through the /api/tmdb function,
+// which holds the key server-side.
+const token = import.meta.env.DEV ? import.meta.env.VITE_TMDB_READ_TOKEN?.trim() : undefined;
+const apiKey = import.meta.env.DEV ? import.meta.env.VITE_TMDB_API_KEY?.trim() : undefined;
+const direct = Boolean(token || apiKey);
+const PROXY = import.meta.env.VITE_TMDB_PROXY?.trim() || (import.meta.env.PROD ? '/api/tmdb' : '');
 
-/** True when a TMDB credential is configured in `.env`. */
-export const hasTmdbKey = Boolean(token || apiKey);
+/** True when films can be searched: a local key, or the production proxy. */
+export const hasTmdbKey = direct || Boolean(PROXY);
 
 export type SearchResult = {
   id: number;
@@ -32,11 +37,17 @@ export class TmdbError extends Error {
 
 async function get<T>(path: string, params: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const qs = new URLSearchParams(params);
-  if (!token && apiKey) qs.set('api_key', apiKey);
-  const res = await fetch(`${API}${path}?${qs}`, {
-    signal,
-    headers: token ? { Authorization: `Bearer ${token}`, accept: 'application/json' } : undefined,
-  });
+  let res: Response;
+  if (direct) {
+    if (!token && apiKey) qs.set('api_key', apiKey);
+    res = await fetch(`${API}${path}?${qs}`, {
+      signal,
+      headers: token ? { Authorization: `Bearer ${token}`, accept: 'application/json' } : undefined,
+    });
+  } else {
+    qs.set('path', path);
+    res = await fetch(`${PROXY}?${qs}`, { signal });
+  }
   if (!res.ok) throw new TmdbError(res.status);
   return (await res.json()) as T;
 }

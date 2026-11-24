@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddMovie } from './components/AddMovie';
 import { LetterboxdImport } from './components/LetterboxdImport';
 import { PosterDetail } from './components/PosterDetail';
 import { ProfileHeader } from './components/ProfileHeader';
+import { ShareSheet } from './components/ShareSheet';
+import { SharedView } from './components/SharedView';
 import { Sheet } from './components/Sheet';
 import { Wall } from './components/Wall';
 import type { ImportSource, LbUpdate, Matched } from './lib/letterboxd';
+import { codeFromHash, decodeWall, type SharedWall } from './lib/shareLink';
 import { downloadJson, loadWall, parseWall, saveWall, type WallMovie, type WallState } from './lib/storage';
 import type { SearchResult } from './lib/tmdb';
 
@@ -14,7 +17,12 @@ type Drops = Map<number, number>;
 
 export default function App() {
   const [wall, setWall] = useState<WallState>(loadWall);
-  const [sheet, setSheet] = useState<'add' | 'letterboxd' | null>(null);
+  const [sheet, setSheet] = useState<'add' | 'letterboxd' | 'share' | null>(null);
+  // a #w=… link shows someone's wall read-only instead of your own
+  const [shared, setShared] = useState<SharedWall | null>(() => {
+    const code = codeFromHash();
+    return code ? decodeWall(code) : null;
+  });
   const [selected, setSelected] = useState<WallMovie | null>(null);
   const [drops, setDrops] = useState<Drops>(new Map());
   const [notice, setNotice] = useState('');
@@ -22,6 +30,22 @@ export default function App() {
   const noticeTimer = useRef<number>(undefined);
 
   useEffect(() => saveWall(wall), [wall]);
+
+  useEffect(() => {
+    const onHash = () => {
+      const code = codeFromHash();
+      setShared(code ? decodeWall(code) : null);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const leaveShared = () => {
+    history.replaceState(null, '', location.pathname + location.search);
+    setShared(null);
+    window.scrollTo({ top: 0 });
+  };
 
   // "N" or "+" opens the search from anywhere (except while typing).
   useEffect(() => {
@@ -42,6 +66,14 @@ export default function App() {
     setNotice(text);
     noticeTimer.current = window.setTimeout(() => setNotice(''), ms);
   };
+
+  const ordered = useMemo(
+    () =>
+      wall.sort === 'rating'
+        ? [...wall.movies].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.addedAt - a.addedAt)
+        : wall.movies,
+    [wall.movies, wall.sort],
+  );
 
   const isPinned = useCallback((id: number) => wall.movies.some((m) => m.id === id), [wall.movies]);
 
@@ -126,13 +158,49 @@ export default function App() {
     }
   };
 
+  const brand = (
+    <span className="brand">
+      poster<span>wall</span>
+    </span>
+  );
+  const credits = (
+    <footer className="credits">
+      <p>
+        Film data and posters from{' '}
+        <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
+          TMDB
+        </a>
+        . This product uses the TMDB API but is not endorsed or certified by TMDB. Not affiliated with Letterboxd.
+      </p>
+    </footer>
+  );
+
+  if (shared) {
+    return (
+      <div className="app">
+        <nav className="topbar" aria-label="Poster Wall">
+          {brand}
+        </nav>
+        <SharedView wall={shared} onExit={leaveShared} />
+        {credits}
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <nav className="topbar" aria-label="Wall tools">
-        <span className="brand">
-          poster<span>wall</span>
-        </span>
+        {brand}
         <div className="tools">
+          <button
+            type="button"
+            className="tool"
+            aria-pressed={wall.sort === 'rating'}
+            disabled={wall.movies.length < 2}
+            onClick={() => setWall((w) => ({ ...w, sort: w.sort === 'rating' ? 'recent' : 'rating' }))}
+          >
+            {wall.sort === 'rating' ? 'Sort: rating' : 'Sort: recent'}
+          </button>
           <button type="button" className="tool tool--lb" onClick={() => setSheet('letterboxd')}>
             Letterboxd
           </button>
@@ -149,6 +217,14 @@ export default function App() {
           </button>
           <button type="button" className="tool" onClick={() => importRef.current?.click()}>
             Import
+          </button>
+          <button
+            type="button"
+            className="tool tool--share"
+            disabled={wall.movies.length === 0}
+            onClick={() => setSheet('share')}
+          >
+            Share
           </button>
           <input
             ref={importRef}
@@ -171,7 +247,7 @@ export default function App() {
           onLinkLetterboxd={() => setSheet('letterboxd')}
         />
         <Wall
-          movies={wall.movies}
+          movies={ordered}
           seed={wall.seed}
           drops={drops}
           onOpen={setSelected}
@@ -180,15 +256,7 @@ export default function App() {
         />
       </main>
 
-      <footer className="credits">
-        <p>
-          Film data and posters from{' '}
-          <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
-            TMDB
-          </a>
-          . This product uses the TMDB API but is not endorsed or certified by TMDB. Not affiliated with Letterboxd.
-        </p>
-      </footer>
+      {credits}
 
       <button type="button" className="fab" onClick={() => setSheet('add')} aria-label="Pin a film (N)">
         <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
@@ -217,6 +285,10 @@ export default function App() {
           }
           onImport={pinMany}
         />
+      </Sheet>
+
+      <Sheet open={sheet === 'share'} onClose={() => setSheet(null)} label="Share your wall" className="sheet--share">
+        <ShareSheet wall={wall} ordered={ordered} onDone={(m) => flash(m, 3500)} />
       </Sheet>
 
       <Sheet open={selected !== null} onClose={() => setSelected(null)} label={selected?.title ?? 'Poster'}>

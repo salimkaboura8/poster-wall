@@ -7,7 +7,15 @@ import { getMovie, normalize, searchMovies, TmdbError, type SearchResult } from 
  *    a same-origin proxy because letterboxd.com sends no CORS headers;
  *  - the official data export (Settings → Import & Export), a ZIP of CSV files.
  */
-const PROXY = (import.meta.env.VITE_LETTERBOXD_PROXY?.trim() || '/letterboxd').replace(/\/$/, '');
+const CUSTOM_PROXY = import.meta.env.VITE_LETTERBOXD_PROXY?.trim().replace(/\/$/, '');
+
+/** Dev: Vite's /letterboxd proxy. Production: the /api/letterboxd function (or your own proxy). */
+const feedUrl = (user: string) =>
+  CUSTOM_PROXY
+    ? `${CUSTOM_PROXY}/${user}/rss/`
+    : import.meta.env.DEV
+      ? `/letterboxd/${user}/rss/`
+      : `/api/letterboxd?user=${user}`;
 
 export type LbFilm = {
   title: string;
@@ -66,7 +74,7 @@ export async function fetchRecent(
 ): Promise<{ displayName: string; films: LbFilm[] }> {
   let res: Response;
   try {
-    res = await fetch(`${PROXY}/${encodeURIComponent(username)}/rss/`, { signal });
+    res = await fetch(feedUrl(encodeURIComponent(username)), { signal });
   } catch (e) {
     if (signal?.aborted) throw e;
     throw new LetterboxdError('network');

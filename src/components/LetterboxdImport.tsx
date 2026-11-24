@@ -28,7 +28,7 @@ type Phase =
 const ERRORS: Record<LetterboxdError['kind'], string> = {
   'not-found': 'No Letterboxd member by that name.',
   empty: 'No films in their recent diary yet. Try the full export below.',
-  network: "Couldn't reach Letterboxd. Is the dev server running? (It proxies the feed.)",
+  network: "Couldn't reach Letterboxd right now. Try again, or use the export file below.",
   'bad-file': "That doesn't look like a Letterboxd export. Use the .zip, or watched.csv from it.",
 };
 
