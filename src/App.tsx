@@ -33,6 +33,12 @@ export default function App() {
 
   useEffect(() => saveWall(wall), [wall]);
 
+  // the tab title follows whose wall is on screen
+  useEffect(() => {
+    const name = (shared ? shared.name : wall.profile.name).trim();
+    document.title = name ? `${name}'s poster wall · Poster Wall` : 'Poster Wall · Your favourite films as a wall of movie posters';
+  }, [shared, wall.profile.name]);
+
   useEffect(() => {
     const onHash = () => {
       const code = codeFromHash();
@@ -166,6 +172,17 @@ export default function App() {
   );
   const credits = (
     <footer className="credits">
+      <section className="about" aria-labelledby="about-title">
+        <h2 id="about-title">
+          About <em>Poster Wall</em>
+        </h2>
+        <p>
+          Poster Wall turns the films you've watched into a wall of movie posters, each one sized by your rating: a
+          5-star film is the biggest poster on the wall. Search any film, rate it in half stars, import your diary and
+          ratings from Letterboxd, reshuffle the collage, and share your wall as a story photo, a square post or a link.
+          It's free, there's no account, and your wall stays in your browser.
+        </p>
+      </section>
       <p>
         Film data and posters from{' '}
         <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
@@ -225,6 +242,7 @@ export default function App() {
       />
 
       <main>
+        <h1 className="sr-only">{wall.profile.name.trim() ? `${wall.profile.name.trim()}'s poster wall` : 'Poster Wall'}</h1>
         <ProfileHeader
           profile={wall.profile}
           count={wall.movies.length}

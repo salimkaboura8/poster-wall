@@ -59,9 +59,8 @@ A small, personal take on the film diary: no ratings and no reviews, just a page
 
 Click **Share** in the top bar.
 
-- **Instagram story** comes first. A 9:16 image of your best-rated films is drawn as soon as the sheet opens, so on a phone **Share to story** hands it to the system share sheet in one tap (pick *Instagram* → *Story*). On a computer the same card saves the image, with the two steps to post it from your phone.
-- **Photo.** The same canvas collage as a *Square* (1080×1080, for X and feed posts) or the *Full wall* (every poster, one tall image). Posters keep their rating size, tilt, tape, pins and star tickets.
-- **Share photo…** On phones, any format can go through the system share sheet (WhatsApp, Messages…); on desktop, *Save photo* downloads it.
+- **Photo.** A collage drawn on a canvas in three formats: *Story* (1080×1920, your best-rated films, for Instagram and Facebook stories), *Square* (1080×1080, for X and feed posts) and *Full wall* (every poster, one tall image). Posters keep their rating size, tilt, tape, pins and star tickets.
+- **Save or share.** *Save photo* downloads the image; on phones *Share…* opens the system share sheet. Websites can't post to an Instagram story directly, so save the *Story* photo and add it from the Instagram app.
 - **Link.** `https://your-site/#w=…` holds the whole wall in the URL fragment: your name, Letterboxd username and each film as a TMDB id + rating, varint-packed and deflated (47 films ≈ 260 characters). There's no database and nothing is stored on a server; the fragment isn't even sent to it. Whoever opens it sees a read-only copy with posters fetched from TMDB, plus *Make your own*.
 - **X / Facebook.** Open their share dialogs with your link and a line of text.
 
@@ -136,6 +135,8 @@ The repo deploys as-is: Vercel detects Vite, builds `dist/`, and serves the two 
 2. In **Project → Settings → Environment Variables**, add `TMDB_READ_TOKEN` (your TMDB *API Read Access Token*) for Production and Preview.
 3. Redeploy. Search, Letterboxd import and share links now work on your public URL, and your key never reaches the browser.
 
+**SEO.** `index.html` carries the title, description, canonical URL, Open Graph / X cards (`public/og.jpg`, 1200×630) and `WebApplication` structured data; `public/` has `robots.txt`, `sitemap.xml`, a web manifest and PNG icons. The first paint is real text (a heading and a sentence), the app sets a real `<h1>` and tab title, and the footer has a short About. If you deploy under another domain, replace `poster-wall-psi.vercel.app` in `index.html`, `robots.txt` and `sitemap.xml`, then submit the sitemap in Google Search Console.
+
 ## How the wall works
 
 The collage is a wrapping flex row with **negative margins**, which is why posters overlap. Each poster is then pushed off the grid by CSS custom properties:
@@ -176,7 +177,7 @@ src/
 │  ├─ Poster.tsx           one seeded poster with tape or pin
 │  ├─ AddMovie.tsx         debounced TMDB search, Enter pins the top match
 │  ├─ LetterboxdImport.tsx username + export import, progress, cancel
-│  ├─ ShareSheet.tsx       Instagram story, photo formats, X / Facebook, link
+│  ├─ ShareSheet.tsx       photo formats, save / share, X / Facebook, link
 │  ├─ TopBar.tsx           full toolbar, or Share + ⋯ menu on phones
 │  ├─ SharedView.tsx       read-only wall opened from a link
 │  ├─ PosterDetail.tsx     big poster, rating, synopsis, unpin

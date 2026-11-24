@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://poster-wall-psi.vercel.app/sitemap.xml

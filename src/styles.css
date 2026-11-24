@@ -1047,6 +1047,24 @@ code {
   color: var(--ink-2);
 }
 
+.about {
+  max-width: 68ch;
+  margin-bottom: 18px;
+}
+
+.about h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.about p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -1574,109 +1592,6 @@ code {
   opacity: 0.45;
   cursor: default;
   transform: none;
-}
-
-.share__card {
-  margin: 0 0 12px;
-  padding: 16px 18px 18px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: rgba(255, 248, 230, 0.03);
-}
-
-.share__card h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
-  font-size: 1.05rem;
-}
-
-.share__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.share__head h3 {
-  margin: 0;
-}
-
-.share__card .share__preview {
-  height: min(36vh, 320px);
-}
-
-.share__story {
-  display: grid;
-  grid-template-columns: 112px 1fr;
-  gap: 18px;
-  align-items: start;
-  border-color: rgba(255, 210, 63, 0.35);
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(255, 210, 63, 0.09), transparent 60%),
-    rgba(255, 248, 230, 0.03);
-}
-
-.share__story-thumb {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 9 / 16;
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--line);
-  color: var(--ink-3);
-  transform: rotate(-2deg);
-  box-shadow: 0 16px 30px -14px rgba(0, 0, 0, 0.9);
-}
-
-.share__story-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  animation: fade 0.35s ease;
-}
-
-.share__story-text p,
-.share__story-text ol {
-  margin: 0 0 14px;
-  color: var(--ink-2);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.share__story-text ol {
-  padding-inline-start: 20px;
-}
-
-.share__story-text h3 svg {
-  color: var(--accent);
-}
-
-.share__story-btn {
-  white-space: nowrap;
-}
-
-.share__tip {
-  margin: 10px 0 0 !important;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1rem !important;
-  color: var(--ink-3) !important;
-}
-
-@media (max-width: 480px) {
-  .share__story {
-    grid-template-columns: 84px 1fr;
-    gap: 14px;
-  }
-
-  .share__story-btn {
-    width: 100%;
-    padding-inline: 12px;
-  }
 }
 
 /* someone else's wall */
