@@ -17,9 +17,22 @@ export type LbFilm = {
   /** Watched / logged date (YYYY-MM-DD) when known. */
   date: string;
   tmdbId?: number;
+  /** Member rating, 0.5–5 in half stars. */
+  rating?: number;
 };
 
-export type Matched = SearchResult & { letterboxdUri: string; watched: string };
+export type Matched = SearchResult & { letterboxdUri: string; watched: string; rating?: number };
+
+/** Fresh Letterboxd data for a film that is already on the wall. */
+export type LbUpdate = { id: number; rating?: number; letterboxdUri?: string };
+
+export type ImportSource = 'feed' | 'export';
+
+/** Half-star rating in 0.5–5, or undefined. */
+export function toRating(raw: string | undefined): number | undefined {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0.5 && n <= 5 ? Math.round(n * 2) / 2 : undefined;
+}
 
 export class LetterboxdError extends Error {
   constructor(public kind: 'not-found' | 'network' | 'empty' | 'bad-file') {
@@ -77,6 +90,7 @@ export async function fetchRecent(
       year: text(item, 'filmYear'),
       uri: filmPage(item.querySelector('link')?.textContent ?? ''),
       date: text(item, 'watchedDate'),
+      rating: toRating(text(item, 'memberRating')),
     });
   }
   if (films.length === 0) throw new LetterboxdError('empty');
@@ -125,6 +139,7 @@ function filmsFromCsv(csv: string): LbFilm[] {
   const iYear = col('year');
   const iUri = col('letterboxd uri');
   const iDate = col('watched date') >= 0 ? col('watched date') : col('date');
+  const iRating = col('rating');
   if (iName < 0) return [];
   return rows
     .map((r) => ({
@@ -132,44 +147,62 @@ function filmsFromCsv(csv: string): LbFilm[] {
       year: (r[iYear] ?? '').trim().slice(0, 4),
       uri: (r[iUri] ?? '').trim(),
       date: (r[iDate] ?? '').trim(),
+      rating: iRating >= 0 ? toRating(r[iRating]) : undefined,
     }))
     .filter((f) => f.title);
 }
 
-// Which file of the export to read, best first. `watched.csv` is every film marked as seen.
-const PREFERRED = ['watched.csv', 'diary.csv', 'ratings.csv', 'films.csv'];
+const filmKey = (f: LbFilm) => `${normalize(f.title)}|${f.year}`;
 
-/** Reads the Letterboxd export ZIP, or a single CSV from it. Newest first, de-duplicated. */
+/**
+ * Reads the Letterboxd export ZIP, or a single CSV from it. Uses `watched.csv` (every film
+ * marked as seen) and layers ratings from `ratings.csv`, then `diary.csv`. Newest first,
+ * de-duplicated.
+ */
 export async function readExport(file: File): Promise<LbFilm[]> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
-  let csv = '';
+  const csvs: Record<string, string> = {};
   if (isZip) {
     let entries: Record<string, Uint8Array>;
     try {
-      entries = unzipSync(bytes, { filter: (f) => PREFERRED.some((n) => f.name.toLowerCase().endsWith(n)) });
+      entries = unzipSync(bytes, { filter: (f) => /\.csv$/i.test(f.name) });
     } catch {
       throw new LetterboxdError('bad-file');
     }
-    const names = Object.keys(entries);
-    // top-level files only (skip lists/*.csv and deleted/*)
-    const pick = PREFERRED.map((n) => names.find((k) => k.toLowerCase().split('/').pop() === n && !/(^|\/)(lists|deleted|orphaned)\//i.test(k))).find(Boolean);
-    if (pick) csv = strFromU8(entries[pick]);
+    for (const [path, data] of Object.entries(entries)) {
+      if (/(^|\/)(lists|deleted|orphaned)\//i.test(path)) continue; // top-level files only
+      csvs[path.toLowerCase().split('/').pop()!] = strFromU8(data);
+    }
   } else {
-    csv = strFromU8(bytes);
+    csvs['watched.csv'] = strFromU8(bytes); // a single CSV: whatever it is, use it as the list
   }
 
-  const films = filmsFromCsv(csv);
+  const base = ['watched.csv', 'diary.csv', 'ratings.csv', 'films.csv'].map((n) => csvs[n]).find(Boolean);
+  const films = base ? filmsFromCsv(base) : [];
   if (films.length === 0) throw new LetterboxdError('bad-file');
+
+  // ratings: ratings.csv is the member's current rating; diary entries fill the gaps
+  const ratings = new Map<string, number>();
+  for (const name of ['diary.csv', 'ratings.csv']) {
+    if (!csvs[name]) continue;
+    for (const f of filmsFromCsv(csvs[name]).sort((a, b) => a.date.localeCompare(b.date))) {
+      if (f.rating === undefined) continue;
+      ratings.set(filmKey(f), f.rating);
+      if (f.uri) ratings.set(f.uri, f.rating);
+    }
+  }
+
   const seen = new Set<string>();
   return films
     .sort((a, b) => b.date.localeCompare(a.date))
     .filter((f) => {
-      const key = f.uri || `${normalize(f.title)}|${f.year}`;
+      const key = f.uri || filmKey(f);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    });
+    })
+    .map((f) => ({ ...f, rating: ratings.get(f.uri) ?? ratings.get(filmKey(f)) ?? f.rating }));
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -210,7 +243,7 @@ export async function matchFilms(
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const r = await findOnTmdb(film, signal);
-          if (r) out[i] = { ...r, letterboxdUri: film.uri, watched: film.date };
+          if (r) out[i] = { ...r, letterboxdUri: film.uri, watched: film.date, rating: film.rating };
           else missed.push(film);
           break;
         } catch (e) {

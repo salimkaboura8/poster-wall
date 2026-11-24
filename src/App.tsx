@@ -5,7 +5,7 @@ import { PosterDetail } from './components/PosterDetail';
 import { ProfileHeader } from './components/ProfileHeader';
 import { Sheet } from './components/Sheet';
 import { Wall } from './components/Wall';
-import type { Matched } from './lib/letterboxd';
+import type { ImportSource, LbUpdate, Matched } from './lib/letterboxd';
 import { downloadJson, loadWall, parseWall, saveWall, type WallMovie, type WallState } from './lib/storage';
 import type { SearchResult } from './lib/tmdb';
 
@@ -55,7 +55,7 @@ export default function App() {
   }, []);
 
   /** Letterboxd import: newest first, then a cascade of drops over ~2 s whatever the count. */
-  const pinMany = (films: Matched[], missed: number) => {
+  const pinMany = (films: Matched[], updates: LbUpdate[], missed: number, source: ImportSource) => {
     const have = new Set(wall.movies.map((m) => m.id));
     const seen = new Set<number>();
     const fresh = films.filter((f) => !have.has(f.id) && !seen.has(f.id) && seen.add(f.id));
@@ -68,17 +68,45 @@ export default function App() {
       overview: f.overview.slice(0, 700),
       addedAt: Date.parse(f.watched) || now - i,
       ...(f.letterboxdUri ? { letterboxdUri: f.letterboxdUri } : {}),
+      ...(f.rating ? { rating: f.rating } : {}),
     }));
+    // films already pinned: take the Letterboxd rating (if any) and fill in the link
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    let rerated = 0;
+    const refresh = (m: WallMovie): WallMovie => {
+      const u = byId.get(m.id);
+      if (!u) return m;
+      if (u.rating !== undefined && u.rating !== m.rating) rerated++;
+      return {
+        ...m,
+        ...(u.rating !== undefined ? { rating: u.rating } : {}),
+        ...(!m.letterboxdUri && u.letterboxdUri ? { letterboxdUri: u.letterboxdUri } : {}),
+      };
+    };
+    const kept = wall.movies.map(refresh);
     const step = Math.max(28, Math.min(110, 2200 / Math.max(movies.length, 1)));
     setDrops(new Map(movies.map((m, i) => [m.id, Math.min(i, 40) * step])));
-    setWall((w) => ({ ...w, movies: [...movies, ...w.movies] }));
+    setWall((w) => ({ ...w, movies: [...movies, ...kept] }));
     setSheet(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     const n = movies.length;
-    flash(
-      `Pinned ${n} film${n === 1 ? '' : 's'} from Letterboxd` + (missed ? ` · ${missed} not found on TMDB` : ''),
-      4200,
-    );
+    const parts = [
+      n ? `Pinned ${n} film${n === 1 ? '' : 's'}` : 'No new films',
+      rerated ? `${rerated} re-sized by your rating` : '',
+      missed ? `${missed} not found on TMDB` : '',
+      source === 'feed' ? 'Import your export for the full history' : '',
+    ].filter(Boolean);
+    flash(parts.join(' · '), 6000);
+  };
+
+  const rate = (id: number, rating: number | undefined) => {
+    const apply = (m: WallMovie): WallMovie => {
+      if (m.id !== id) return m;
+      const { rating: _old, ...rest } = m;
+      return rating ? { ...rest, rating } : rest;
+    };
+    setWall((w) => ({ ...w, movies: w.movies.map(apply) }));
+    setSelected((s) => (s ? apply(s) : s));
   };
 
   const unpin = (id: number) => {
@@ -192,7 +220,7 @@ export default function App() {
       </Sheet>
 
       <Sheet open={selected !== null} onClose={() => setSelected(null)} label={selected?.title ?? 'Poster'}>
-        {selected && <PosterDetail movie={selected} onRemove={unpin} onClose={() => setSelected(null)} />}
+        {selected && <PosterDetail movie={selected} onRemove={unpin} onRate={rate} onClose={() => setSelected(null)} />}
       </Sheet>
 
       <div className={`toast${notice ? ' toast--on' : ''}`} role="status">
