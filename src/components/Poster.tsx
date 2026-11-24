@@ -7,7 +7,8 @@ type Props = {
   movie: WallMovie;
   index: number;
   seed: number;
-  isNew: boolean;
+  /** Set when the poster just arrived: it falls onto the wall after this many ms. */
+  dropDelay?: number;
   onOpen: (m: WallMovie) => void;
 };
 
@@ -15,7 +16,7 @@ const SIZES = [0.82, 1, 1, 1.12, 1.26];
 const PAPERS = ['#e9d9b8', '#d8c7a5', '#c9d3c2', '#e6c9b7', '#cfc6d8'];
 
 /** One poster with its own seeded tilt, offset, size and fastener. */
-export const Poster = memo(function Poster({ movie, index, seed, isNew, onOpen }: Props) {
+export const Poster = memo(function Poster({ movie, index, seed, dropDelay, onOpen }: Props) {
   const [broken, setBroken] = useState(false);
 
   const look = useMemo(() => {
@@ -45,7 +46,9 @@ export const Poster = memo(function Poster({ movie, index, seed, isNew, onOpen }
     '--tape-x': `${look.tapeX.toFixed(0)}%`,
     '--paper': look.paper,
     '--delay': `${Math.min(index, 24) * 45}ms`,
+    '--drop-delay': `${dropDelay ?? 0}ms`,
   } as CSSProperties;
+  const isNew = dropDelay !== undefined;
 
   const src = movie.posterPath && !broken ? posterUrl(movie.posterPath, look.scale > 1.1 ? 'w500' : 'w342') : null;
 

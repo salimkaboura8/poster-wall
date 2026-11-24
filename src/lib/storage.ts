@@ -5,12 +5,16 @@ export type WallMovie = {
   posterPath: string | null;
   overview: string;
   addedAt: number;
+  /** Film page on Letterboxd, when the film came from a Letterboxd import. */
+  letterboxdUri?: string;
 };
 
 export type Profile = {
   name: string;
   /** Small JPEG data URL (resized client-side). */
   avatar: string | null;
+  /** Letterboxd username (shown as a link under the name). */
+  letterboxd: string | null;
 };
 
 export type WallState = {
@@ -23,9 +27,12 @@ export type WallState = {
 
 const STORAGE_KEY = 'poster-wall:v1';
 
+/** Film pages (from the RSS feed) or boxd.it short links (from the CSV export). */
+export const LETTERBOXD_URI = /^https:\/\/(letterboxd\.com\/film\/[\w-]+\/|boxd\.it\/\w+)$/;
+
 export const emptyWall = (): WallState => ({
   version: 1,
-  profile: { name: '', avatar: null },
+  profile: { name: '', avatar: null, letterboxd: null },
   movies: [],
   seed: Math.floor(Math.random() * 1e6),
 });
@@ -49,7 +56,11 @@ export function parseWall(raw: unknown): WallState | null {
   const avatar = typeof p.avatar === 'string' && p.avatar.startsWith('data:image/') ? p.avatar : null;
   return {
     version: 1,
-    profile: { name: typeof p.name === 'string' ? p.name.slice(0, 60) : '', avatar },
+    profile: {
+      name: typeof p.name === 'string' ? p.name.slice(0, 60) : '',
+      avatar,
+      letterboxd: typeof p.letterboxd === 'string' && /^[A-Za-z0-9_]{2,15}$/.test(p.letterboxd) ? p.letterboxd : null,
+    },
     movies: o.movies.filter(isMovie).map((m) => ({
       id: m.id,
       title: String(m.title).slice(0, 200),
@@ -57,6 +68,9 @@ export function parseWall(raw: unknown): WallState | null {
       posterPath: m.posterPath && /^\/[\w.-]+$/.test(m.posterPath) ? m.posterPath : null,
       overview: typeof m.overview === 'string' ? m.overview.slice(0, 2000) : '',
       addedAt: typeof m.addedAt === 'number' ? m.addedAt : Date.now(),
+      ...(typeof m.letterboxdUri === 'string' && LETTERBOXD_URI.test(m.letterboxdUri)
+        ? { letterboxdUri: m.letterboxdUri }
+        : {}),
     })),
     seed: typeof o.seed === 'number' ? o.seed : 1,
   };

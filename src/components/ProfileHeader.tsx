@@ -1,11 +1,13 @@
 import { useRef } from 'react';
 import type { Profile } from '../lib/storage';
 import { fileToAvatar } from '../lib/storage';
+import { profileUrl } from '../lib/letterboxd';
 
 type Props = {
   profile: Profile;
   count: number;
   onChange: (p: Profile) => void;
+  onLinkLetterboxd: () => void;
 };
 
 function initials(name: string): string {
@@ -13,7 +15,7 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '★';
 }
 
-export function ProfileHeader({ profile, count, onChange }: Props) {
+export function ProfileHeader({ profile, count, onChange, onLinkLetterboxd }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function pickAvatar(file: File | undefined) {
@@ -74,10 +76,25 @@ export function ProfileHeader({ profile, count, onChange }: Props) {
           aria-label="Your name"
           onChange={(e) => onChange({ ...profile, name: e.target.value })}
         />
-        <p className="profile__count">
-          <span className="count-num">{count}</span>{' '}
-          <em>{count === 1 ? 'poster pinned' : 'posters pinned'}</em>
-        </p>
+        <div className="profile__meta">
+          <p className="profile__count">
+            <span className="count-num">{count}</span>{' '}
+            <em>{count === 1 ? 'poster pinned' : 'posters pinned'}</em>
+          </p>
+          {profile.letterboxd ? (
+            <a className="lb-chip" href={profileUrl(profile.letterboxd)} target="_blank" rel="noreferrer">
+              <em>letterboxd</em> @{profile.letterboxd}
+              <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+                <path d="M8 16 16 8M9 8h7v7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ) : (
+            <button type="button" className="lb-chip lb-chip--empty" onClick={onLinkLetterboxd}>
+              + Link Letterboxd
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
